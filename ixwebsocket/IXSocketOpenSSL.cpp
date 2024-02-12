@@ -5,6 +5,8 @@
  *
  *  Adapted from Satori SDK OpenSSL code.
  */
+#include <fstream>
+#include <iostream>
 #ifdef IXWEBSOCKET_USE_OPEN_SSL
 
 #include "IXSocketOpenSSL.h"
@@ -94,6 +96,7 @@ namespace ix
     std::atomic<bool> SocketOpenSSL::_openSSLInitializationSuccessful(false);
     std::once_flag SocketOpenSSL::_openSSLInitFlag;
     std::vector<std::unique_ptr<std::mutex>> openSSLMutexes;
+    std::map<SSL_CTX*, std::string> SocketOpenSSL::_keyLogMap;
 
     SocketOpenSSL::SocketOpenSSL(const SocketTLSOptions& tlsOptions, int fd)
         : Socket(fd)
@@ -463,6 +466,26 @@ namespace ix
         }
     }
 
+    void SocketOpenSSL::openSSLKeylogCallback(const SSL *ssl, const char *line)
+    {
+        SSL_CTX* ctx = SSL_get_SSL_CTX(ssl);
+        if(ctx == nullptr)
+        {
+            return;
+        }
+        const auto it = _keyLogMap.find(ctx);
+        if(it == _keyLogMap.end())
+        {
+            return;
+        }
+        const auto keylogFile = it->second;
+        std::ofstream keylogStream(keylogFile, std::ios_base::app);
+        if(keylogStream.is_open())
+        {
+            keylogStream << line << std::endl;
+        }
+    }
+
     bool SocketOpenSSL::handleTLSOptions(std::string& errMsg)
     {
         ERR_clear_error();
@@ -563,6 +586,13 @@ namespace ix
             return false;
         }
 
+        if(!_tlsOptions.keyLogFile.empty())
+        {
+            {
+                _keyLogMap[_ssl_context] = _tlsOptions.keyLogFile;
+            }
+            SSL_CTX_set_keylog_callback(_ssl_context, openSSLKeylogCallback);
+        }
         return true;
     }
 
@@ -800,6 +830,7 @@ namespace ix
         if (_ssl_context != nullptr)
         {
             SSL_CTX_free(_ssl_context);
+            _keyLogMap.erase(_ssl_context);
             _ssl_context = nullptr;
         }
 

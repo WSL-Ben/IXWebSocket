@@ -30,6 +30,9 @@ namespace ix
         // list of ciphers (rsa, etc...)
         std::string ciphers = "DEFAULT";
 
+        // Optionally write out the key log file for use with Wireshark
+        std::string keyLogFile = "";
+
         // whether tls is enabled, used for server code
         bool tls = false;
 
@@ -49,6 +52,8 @@ namespace ix
         const std::string& getErrorMsg() const;
 
         std::string getDescription() const;
+
+        std::string getKeyLogFile() const;
 
     private:
         mutable std::string _errMsg;

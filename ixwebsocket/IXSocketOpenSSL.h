@@ -10,6 +10,7 @@
 #include "IXCancellationRequest.h"
 #include "IXSocket.h"
 #include "IXSocketTLSOptions.h"
+#include <map>
 #include <mutex>
 #include <openssl/bio.h>
 #include <openssl/conf.h>
@@ -51,6 +52,7 @@ namespace ix
 
         // Required for OpenSSL < 1.1
         static void openSSLLockingCallback(int mode, int type, const char* /*file*/, int /*line*/);
+        static void openSSLKeylogCallback(const SSL* ssl, const char* line);
 
         SSL* _ssl_connection;
         SSL_CTX* _ssl_context;
@@ -59,6 +61,7 @@ namespace ix
 
         mutable std::mutex _mutex; // OpenSSL routines are not thread-safe
 
+        static std::map<SSL_CTX*, std::string> _keyLogMap;
         static std::once_flag _openSSLInitFlag;
         static std::atomic<bool> _openSSLInitializationSuccessful;
     };

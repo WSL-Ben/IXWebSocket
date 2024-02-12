@@ -90,4 +90,9 @@ namespace ix
         ss << "  tls      = " << tls << std::endl;
         return ss.str();
     }
+
+    std::string SocketTLSOptions::getKeyLogFile() const
+    {
+            return keyLogFile;
+    }
 } // namespace ix
